@@ -1,0 +1,54 @@
+version: '3.1'
+
+services:
+
+  db:
+    image: postgres:13.2
+    container_name: postgres-singleton
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: example
+    ports:
+      - 5432:5432
+
+  grafana:
+    image: grafana/grafana
+    environment:
+      - GF_SERVER_ROOT_URL=http://127.0.0.1:3000
+      - GF_SECURITY_ADMIN_PASSWORD=123456
+    ports:
+      - 3000:3000
+
+  prometheus:
+    image: prom/prometheus:v2.12.0
+    container_name: prometheus-singleton
+    volumes:
+      - ./data:/prometheus-data
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - 9090:9090
+
+  postgres-exporter:
+    image: wrouesnel/postgres_exporter
+    restart: always
+    environment:
+      DATA_SOURCE_URI: <host_pg>:5432/postgres?sslmode=disable
+      DATA_SOURCE_USER: postgres
+      DATA_SOURCE_PASS: example
+    ports:
+      - 9187:9187
+    depends_on:
+      - db
+
+  postgrespgscv:
+    image: weaponry/pgscv
+    container_name: postgres-pgscv
+    restart: always
+    environment:
+      PGSCV_DISABLE_COLLECTORS: system
+      DATABASE_DSN: postgresql://postgres:example@<host_pg>/postgres
+      PGSCV_LISTEN_ADDRESS: 0.0.0.0:9890
+    ports:
+      - 9890:9890
+    depends_on:
+      - db
